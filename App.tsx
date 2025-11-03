@@ -1,53 +1,24 @@
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
-import type { MutableRefObject } from 'react';
+import React, { useState, useCallback } from 'react';
 import Papa from 'papaparse';
 import { Receipt, ReceiptStatus } from './types';
 import FileUpload from './components/FileUpload';
 import ActionButtons from './components/ActionButtons';
 import ReceiptCard from './components/ReceiptCard';
 
-// This is to avoid TS errors for a library that is not explicitly typed
-// In a real project, we would add @types/react-tinder-card
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TinderCardRef = any;
-
 const App: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [lastDirection, setLastDirection] = useState<string | undefined>();
-  
-  const currentIndexRef = useRef(currentIndex);
-  
-  const childRefs: MutableRefObject<TinderCardRef[]> = useRef([]);
+  const [lastAction, setLastAction] = useState<'approved' | 'rejected' | null>(null);
 
-  const canSwipe = currentIndex >= 0;
+  const handleDecision = (status: ReceiptStatus) => {
+    if (currentIndex >= receipts.length) return;
 
-  const swiped = useCallback((direction: string, index: number) => {
-    setLastDirection(direction);
-    const newStatus = direction === 'right' ? ReceiptStatus.Approved : ReceiptStatus.Rejected;
+    setLastAction(status === ReceiptStatus.Approved ? 'approved' : 'rejected');
     setReceipts(prevReceipts => 
-      prevReceipts.map((receipt, i) => i === index ? { ...receipt, status: newStatus } : receipt)
+      prevReceipts.map((receipt, i) => i === currentIndex ? { ...receipt, status } : receipt)
     );
-    updateCurrentIndex(index - 1);
-  }, []);
-  
-  const updateCurrentIndex = (val: number) => {
-    setCurrentIndex(val);
-    currentIndexRef.current = val;
-  };
-
-  const outOfFrame = (name: string, idx: number) => {
-    // handle the case where the card is swiped away quickly
-    if (currentIndexRef.current >= idx && childRefs.current[idx]) {
-        childRefs.current[idx].restoreCard();
-    }
-  };
-
-  const swipe = async (dir: 'left' | 'right') => {
-    if (canSwipe && currentIndex < receipts.length) {
-      await childRefs.current[currentIndex].swipe(dir);
-    }
+    setCurrentIndex(prevIndex => prevIndex + 1);
   };
   
   const handleFileUpload = (file: File) => {
@@ -61,8 +32,7 @@ const App: React.FC = () => {
           status: ReceiptStatus.Pending,
         }));
         setReceipts(parsedData);
-        setCurrentIndex(parsedData.length - 1);
-        childRefs.current = Array(parsedData.length).fill(0).map(() => React.createRef());
+        setCurrentIndex(0);
       },
     });
   };
@@ -83,36 +53,29 @@ const App: React.FC = () => {
   const resetApp = () => {
     setReceipts([]);
     setCurrentIndex(0);
-    setLastDirection(undefined);
-    childRefs.current = [];
+    setLastAction(null);
   }
-
-  const reviewedCount = receipts.length - 1 - currentIndex;
 
   if (receipts.length === 0) {
     return <FileUpload onFileUpload={handleFileUpload} />;
   }
 
+  const allDone = currentIndex >= receipts.length;
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans">
         <header className="w-full max-w-md text-center mb-4">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Receipt Rover</h1>
-            <p className="text-slate-600 dark:text-slate-400">Swipe right to approve, left to reject.</p>
+            <p className="text-slate-600 dark:text-slate-400">Click to approve or reject receipts.</p>
         </header>
         
-        <div className="w-full max-w-[350px] h-[550px] relative">
-            {receipts.map((receipt, index) => (
-              <ReceiptCard
-                ref={(el: TinderCardRef) => (childRefs.current[index] = el)}
-                key={receipt.id}
-                receipt={receipt}
-                onSwipe={(dir) => swiped(dir, index)}
-                onCardLeftScreen={() => outOfFrame(receipt.name, index)}
-              />
-            ))}
+        <div className="w-full max-w-[350px] h-[550px] flex items-center justify-center">
+            {!allDone && receipts[currentIndex] && (
+              <ReceiptCard receipt={receipts[currentIndex]} />
+            )}
         </div>
         
-        {currentIndex < 0 ? (
+        {allDone ? (
             <div className="text-center p-8 mt-6 w-full max-w-md bg-white dark:bg-slate-800 rounded-xl shadow-lg">
                 <h2 className="text-2xl font-bold mb-4 text-emerald-500">All Done!</h2>
                 <p className="mb-6 text-slate-600 dark:text-slate-400">You've reviewed all {receipts.length} receipts.</p>
@@ -127,10 +90,13 @@ const App: React.FC = () => {
             </div>
         ) : (
             <>
-                <ActionButtons onReject={() => swipe('left')} onApprove={() => swipe('right')} />
+                <ActionButtons 
+                    onReject={() => handleDecision(ReceiptStatus.Rejected)} 
+                    onApprove={() => handleDecision(ReceiptStatus.Approved)} 
+                />
                 <div className="mt-6 text-center text-slate-500 dark:text-slate-400">
-                    <p>Reviewed: {reviewedCount} / {receipts.length}</p>
-                    {lastDirection ? <p className="capitalize">Last Action: {lastDirection === 'right' ? 'Approved' : 'Rejected'}</p> : <p>&nbsp;</p>}
+                    <p>Reviewed: {currentIndex} / {receipts.length}</p>
+                    {lastAction ? <p className="capitalize">Last Action: {lastAction}</p> : <p>&nbsp;</p>}
                 </div>
             </>
         )}
@@ -139,4 +105,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-   

@@ -1,4 +1,3 @@
-
 export enum ReceiptStatus {
     Pending = 'pending',
     Approved = 'approved',
@@ -12,12 +11,3 @@ export interface Receipt {
     receiptUrl: string;
     status: ReceiptStatus;
 }
-
-export interface GeminiAnalysis {
-    isValid: boolean;
-    reason: string;
-    vendor: string;
-    totalAmount: string;
-    date: string;
-}
-   

@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Receipt Rover",
+  "description": "A 'dating app-style' platform to quickly verify or reject travel receipts from an uploaded CSV/Excel file. Users can swipe or click to approve/reject, with an optional AI-powered smart verification assistant.",
+  "requestFramePermissions": []
+}

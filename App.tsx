@@ -11,6 +11,7 @@ const App: React.FC = () => {
   // FIX: Use the `useState` hook from React. `aistudio.useState` is not a valid function.
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [verifiableCount, setVerifiableCount] = useState(0);
   const [lastAction, setLastAction] = useState<'approved' | 'rejected' | null>(null);
 
   const handleDecision = (status: ReceiptStatus) => {
@@ -28,20 +29,36 @@ const App: React.FC = () => {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const cleanedData = (results.data as any[]).filter(row => {
+        // 1. Filter for rows that are potentially valid
+        const relevantData = (results.data as any[]).filter(row => {
           const requestsTravel = row['requests travel (travel form)']?.trim().toLowerCase();
           const receiptUrl = row['receiptUrl']?.trim().toLowerCase();
-          
-          // Only include rows where travel was requested and a receipt URL is present and not 'none'
           return requestsTravel === 'yes' && receiptUrl && receiptUrl !== 'none';
         });
 
-        const parsedData = cleanedData.map((row, index) => ({
-          ...row,
-          id: row.id || `receipt-${index}`,
-          status: ReceiptStatus.Pending,
-        }));
-        setReceipts(parsedData);
+        // 2. Process all relevant rows, assigning status based on project submission
+        const processedData = relevantData.map((row, index) => {
+          const projectSubmission = row['project']?.trim().toLowerCase();
+          
+          const status = 
+            !projectSubmission || projectSubmission === 'no submission'
+              ? ReceiptStatus.Rejected 
+              : ReceiptStatus.Pending;
+
+          return {
+            ...row,
+            id: row.id || `receipt-${index}`,
+            status: status,
+          };
+        });
+        
+        // 3. Separate for manual verification vs. auto-rejected
+        const needsVerification = processedData.filter(r => r.status === ReceiptStatus.Pending);
+        const autoRejected = processedData.filter(r => r.status === ReceiptStatus.Rejected);
+
+        // 4. Set state with verifiable items first, followed by auto-rejected ones
+        setReceipts([...needsVerification, ...autoRejected]);
+        setVerifiableCount(needsVerification.length);
         setCurrentIndex(0);
       },
     });
@@ -72,6 +89,7 @@ const App: React.FC = () => {
   const resetApp = () => {
     setReceipts([]);
     setCurrentIndex(0);
+    setVerifiableCount(0);
     setLastAction(null);
   }
 
@@ -79,7 +97,7 @@ const App: React.FC = () => {
     return <FileUpload onFileUpload={handleFileUpload} />;
   }
 
-  const allDone = currentIndex >= receipts.length;
+  const allDone = currentIndex >= verifiableCount;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans">
@@ -97,10 +115,11 @@ const App: React.FC = () => {
         {allDone ? (
             <div className="text-center p-8 mt-6 w-full max-w-md bg-white dark:bg-slate-800 rounded-xl shadow-lg">
                 <h2 className="text-2xl font-bold mb-4 text-emerald-500">All Done!</h2>
-                <p className="mb-6 text-slate-600 dark:text-slate-400">You've reviewed all {receipts.length} receipts.</p>
+                <p className="mb-6 text-slate-600 dark:text-slate-400">You've reviewed all {verifiableCount} receipts requiring attention.</p>
+                <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">A total of {receipts.length} receipts were processed.</p>
                 <div className="flex space-x-4 justify-center">
                     <button onClick={downloadResults} className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
-                        Download Results
+                        Download Full Report
                     </button>
                     <button onClick={resetApp} className="px-6 py-3 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 font-semibold rounded-lg shadow-md hover:bg-slate-300 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
                         Start Over
@@ -114,7 +133,7 @@ const App: React.FC = () => {
                     onApprove={() => handleDecision(ReceiptStatus.Approved)} 
                 />
                 <div className="mt-6 text-center text-slate-500 dark:text-slate-400">
-                    <p>Reviewed: {currentIndex} / {receipts.length}</p>
+                    <p>Reviewing: {currentIndex + 1} / {verifiableCount}</p>
                     {lastAction ? <p className="capitalize">Last Action: {lastAction}</p> : <p>&nbsp;</p>}
                 </div>
                 <div className="flex space-x-4 justify-center mt-6 border-t border-slate-200 dark:border-slate-700 pt-6 w-full max-w-sm">

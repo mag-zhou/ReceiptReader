@@ -44,8 +44,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload }) => {
     return (
         <div className="min-h-screen w-full flex flex-col justify-center items-center p-4">
             <div className="w-full max-w-lg text-center">
-                <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-2">Receipt Rover</h1>
-                <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">Quickly verify receipts with a swipe.</p>
+                <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-2">Receipt Reader</h1>
+                <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">Quickly verify receipts with a click.</p>
 
                 <div 
                     onDragEnter={handleDragEnter}

@@ -102,7 +102,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans">
         <header className="w-full max-w-md text-center mb-4">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Receipt Rover</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Receipt Reader</h1>
             <p className="text-slate-600 dark:text-slate-400">Click to approve or reject receipts.</p>
         </header>
         

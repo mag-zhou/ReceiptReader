@@ -26,7 +26,15 @@ const App: React.FC = () => {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const parsedData = (results.data as any[]).map((row, index) => ({
+        const cleanedData = (results.data as any[]).filter(row => {
+          const requestsTravel = row['requests travel (travel form)']?.trim().toLowerCase();
+          const receiptUrl = row['receiptUrl']?.trim().toLowerCase();
+          
+          // Only include rows where travel was requested and a receipt URL is present and not 'none'
+          return requestsTravel === 'yes' && receiptUrl && receiptUrl !== 'none';
+        });
+
+        const parsedData = cleanedData.map((row, index) => ({
           ...row,
           id: row.id || `receipt-${index}`,
           status: ReceiptStatus.Pending,

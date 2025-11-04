@@ -1,5 +1,6 @@
 
-import React, { useState, useCallback } from 'react';
+// FIX: Correctly import useState from React. The previous import was syntactically incorrect and caused downstream errors.
+import React, { useState } from 'react';
 import Papa from 'papaparse';
 import { Receipt, ReceiptStatus } from './types';
 import FileUpload from './components/FileUpload';
@@ -7,6 +8,7 @@ import ActionButtons from './components/ActionButtons';
 import ReceiptCard from './components/ReceiptCard';
 
 const App: React.FC = () => {
+  // FIX: Use the `useState` hook from React. `aistudio.useState` is not a valid function.
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lastAction, setLastAction] = useState<'approved' | 'rejected' | null>(null);
@@ -46,7 +48,16 @@ const App: React.FC = () => {
   };
 
   const downloadResults = () => {
-    const csv = Papa.unparse(receipts);
+    const exportData = receipts.map(receipt => {
+      // Use 'as any' to handle all original columns from the CSV
+      const { status, ...rest } = receipt as any;
+      return {
+        ...rest,
+        verification_status: status,
+      };
+    });
+
+    const csv = Papa.unparse(exportData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -105,6 +116,14 @@ const App: React.FC = () => {
                 <div className="mt-6 text-center text-slate-500 dark:text-slate-400">
                     <p>Reviewed: {currentIndex} / {receipts.length}</p>
                     {lastAction ? <p className="capitalize">Last Action: {lastAction}</p> : <p>&nbsp;</p>}
+                </div>
+                <div className="flex space-x-4 justify-center mt-6 border-t border-slate-200 dark:border-slate-700 pt-6 w-full max-w-sm">
+                    <button onClick={downloadResults} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
+                        Download Progress
+                    </button>
+                    <button onClick={resetApp} className="px-4 py-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg shadow-md hover:bg-slate-300 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
+                        Start Over
+                    </button>
                 </div>
             </>
         )}

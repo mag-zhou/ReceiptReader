@@ -10,4 +10,5 @@ export interface Receipt {
     email: string;
     receiptUrl: string;
     status: ReceiptStatus;
+    reason?: string;
 }
